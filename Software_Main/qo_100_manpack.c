@@ -1,26 +1,31 @@
 #define VERSION   "1.02k"
 
-// UCX installation: On blank chip, use (standard Arduino Uno) fuse settings (E:FD, H:DE, L:FF), and use customized Optiboot bootloader for 20MHz clock, then upload via serial interface (with RX, TX and DTR lines connected to pin 1, 2, 3 respectively)
-// UCX pin defintions
-#define SDA     3         //PD3    (pin 5)
-#define SCL     4         //PD4    (pin 6)
+// TDX installation: On blank chip, use (standard Arduino Uno) fuse settings (E:FD, H:DE, L:FF), and use customized Optiboot bootloader for 20MHz clock, then upload via serial interface (with RX, TX and DTR lines connected to pin 1, 2, 3 respectively)
+//#define SDA     3         //PD3    (pin 5)
+//#define SCL     4         //PD4    (pin 6)
+#define FREQCNT 5         //PD5    (pin 11)
 #define ROT_A   6         //PD6    (pin 12)
 #define ROT_B   7         //PD7    (pin 13)
 #define RX      8         //PB0    (pin 14)
 #define SIDETONE 9        //PB1    (pin 15)
 #define KEY_OUT 10        //PB2    (pin 16)
-#define NTX     11        //PB3    (pin 17)
-#define DAH     12        //PB4    (pin 18)
-#define DIT     13        //PB5    (pin 19)
+//#define NTX     11        //PB3    (pin 17)
+#define SIG_OUT 13        //PB3    (pin 17)
+#define DAH     11        //PB4    (pin 18)
+#define DIT     12        //PB5    (pin 19) //D13 has LED... be carefull baris
 #define AUDIO1  14        //PC0/A0 (pin 23)
 #define AUDIO2  15        //PC1/A1 (pin 24)
 #define DVM     16        //PC2/A2 (pin 25)
 #define BUTTONS 17        //PC3/A3 (pin 26)
+#define SDA     18        //PC4    (pin 27)
+#define SCL     19        //PC5    (pin 28)
+// In addition set:
 #define OLED  1
+//#define ONEBUTTON  1
 #undef DEBUG
 #define _DELAY() for(uint8_t i = 0; i != 5; i++) asm("nop");
-#define F_XTAL 20004000
-#define F_CPU F_XTAL
+//#define F_XTAL 27004000
+//#define F_CPU F_XTAL
 //experimentally: #define AUTO_ADC_BIAS 1
 
 
@@ -33,8 +38,8 @@
 class I2C_ {  // direct port I/O (disregards/does-not-need pull-ups)
 public:
   #define _DELAY() for(uint8_t i = 0; i != 4; i++) asm("nop"); // 4=731kb/s
-  #define _I2C_SDA (1<<3) // PD3
-  #define _I2C_SCL (1<<2) // PD2
+  #define _I2C_SDA (1<<2) // PD2
+  #define _I2C_SCL (1<<3) // PD3
   #define _I2C_INIT() _I2C_SDA_HI(); _I2C_SCL_HI(); DDRD |= (_I2C_SDA | _I2C_SCL);
   #define _I2C_SDA_HI() PORTD |=  _I2C_SDA; _DELAY();
   #define _I2C_SDA_LO() PORTD &= ~_I2C_SDA; _DELAY();
@@ -525,7 +530,14 @@ public:
   }
 };
 //#define OLED  1   // SDD1306 connection on display header: 1=GND(black), 2=5V(red), 13=SDA(brown), 14=SCK(orange)
+#ifdef OLED
 SSD1306Device lcd;
+#else
+LCD lcd;     // highly-optimized LCD driver, OK for QCX supplied displays
+//LCD_ lcd;  // slower LCD, suitable for non-QCX supplied displays
+//#include <LiquidCrystal.h>
+//LiquidCrystal lcd(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
+#endif
 
 volatile int8_t encoder_val = 0;
 volatile int8_t encoder_step = 0;
@@ -760,6 +772,63 @@ public:
     i2c.stop();      
   }
   void SendRegister(uint8_t reg, uint8_t val){ SendRegister(reg, &val, 1); }
+/*
+  bool dirty;
+
+  void set_pll(uint8_t pll, uint32_t fvco){  // Set PLL (fractional) PLLA=0, PLLB=1
+    uint8_t msa; uint32_t msb, msc, msp1, msp2, msp3p2;
+    msa = fvco / fxtal;     // Integer part of vco/fxtal
+    msb = ((uint64_t)(fvco % fxtal)*_MSC) / fxtal; // Fractional part
+    msc = _MSC;
+
+    msp1 = 128*msa + 128*msb/msc - 512;
+    msp2 = 128*msb - 128*msb/msc * msc;    // msp3 == msc
+    msp3p2 = (((msc & 0x0F0000) <<4) | msp2);  // msp3 on top nibble
+    uint8_t pll_regs[8] = { BB1(msc), BB0(msc), BB2(msp1), BB1(msp1), BB0(msp1), BB2(msp3p2), BB1(msp2), BB0(msp2) };
+    SendRegister(26+pll*8, pll_regs, 8); // Write to PLL[pll]
+  }
+
+  void set_ms(uint8_t clk, uint8_t linked_pll, uint8_t msa, uint8_t rdiv, uint8_t phase){  // Set Multisynth divider (integer) CLK0=0, CLK1=1, CLK2=2
+    uint32_t msp1 = (128*msa - 512) | (((uint32_t)rdiv)<<20);     // msp1 and msp2=0, msp3=1, not fractional
+    uint8_t ms_regs[8] = {0, 1, BB2(msp1), BB1(msp1), BB0(msp1), 0, 0, 0};
+    SendRegister(42+clk*8, ms_regs, 8); // Write to MS[clk]
+    SendRegister(16+clk, (linked_pll*0x20)|0x0C|3|0x40);       // CLK[clk]: PLL[pll] local msynth; 3=8mA; 0x40=integer division, bit7:6=0->power-up
+    SendRegister(165+clk, phase * msa / 90);  // CLK[clk]: phase (on change -> reset PLL)
+    static uint16_t pm[3]; // to detect a need for a PLL reset
+    if(pm[clk] != ((phase)*msa/90)){ pm[clk] = (phase)*msa/90; dirty=true; } // 0x20 reset PLLA; 0x80 reset PLLB
+  }
+
+  void set_freq(uint8_t clk, uint8_t pll, uint32_t fout, uint8_t phase){
+    uint8_t rdiv = 0;             // CLK pin sees fout/(2^rdiv)
+    if(fout < 500000){ rdiv = 7; fout *= 128; }; // Divide by 128 for fout 4..500kHz
+
+    uint16_t d = (16 * fxtal) / fout;  // Integer part
+    if(fout > 30000000) d = (34 * fxtal) / fout; // when fvco is getting too low (400 MHz)
+
+    if( (d * (fout - 5000) / fxtal) != (d * (fout + 5000) / fxtal) ) d--; // Test if multiplier remains same for freq deviation +/- 5kHz, if not use different divider to make same
+    uint32_t fvco = d * fout;  // Variable PLL VCO frequency at integer multiple of fout at around 27MHz*16 = 432MHz
+
+    set_pll(pll, fvco);
+    set_ms(clk, pll, fvco / fout, rdiv, phase);
+
+    _fout = fout;  // cache
+    _div = d;
+    _msa128min512 = fvco / fxtal * 128 - 512;
+    _msb128=((uint64_t)(fvco % fxtal)*_MSC*128) / fxtal;
+  }
+
+  void pll_reset(){ if(dirty){ dirty=false; SendRegister(177, 0xA0); } } // reset PLLA and PLLB, if necessary
+
+  void oe(uint8_t mask){ SendRegister(3, ~mask); } // Output-enable mask: CLK2=4; CLK1=2; CLK0=1
+
+  void freq(uint32_t f, uint8_t i, uint8_t q){  // Set CLK0,1 (PLLA) to fout Hz with phase i, q, and prepare CLK2 (PLL2).
+    set_freq(0, 0, f, i);
+    set_freq(1, 0, f, q);
+    set_freq(2, 1, f, 0);
+    pll_reset();
+    oe(3);
+  }
+*/
   int16_t iqmsa; // to detect a need for a PLL reset
 
   void freq(uint32_t fout, uint8_t i, uint8_t q){  // Set a CLK0,1 to fout Hz with phase i, q
@@ -823,9 +892,224 @@ public:
 
 };
 static SI5351 si5351;
+// */
+
+ /*
+class SI5351 : public I2C {
+public:
+  #define SI_I2C_ADDR 0x60  // SI5351A I2C address: 0x60 for SI5351A-B-GT; 0x62 for SI5351A-B-04486-GT; 0x6F for SI5351A-B02075-GT; see here for other variants: https://www.silabs.com/TimingUtility/timing-download-document.aspx?OPN=Si5351A-B02075-GT&OPNRevision=0&FileType=PublicAddendum
+  #define SI_CLK_OE 3     // Register definitions
+  #define SI_CLK0_CONTROL 16
+  #define SI_CLK1_CONTROL 17
+  #define SI_CLK2_CONTROL 18
+  #define SI_SYNTH_PLL_A 26
+  #define SI_SYNTH_PLL_B 34
+  #define SI_SYNTH_MS_0 42
+  #define SI_SYNTH_MS_1 50
+  #define SI_SYNTH_MS_2 58
+  #define SI_CLK0_PHOFF 165
+  #define SI_CLK1_PHOFF 166
+  #define SI_CLK2_PHOFF 167
+  #define SI_PLL_RESET 177
+  #define SI_MS_INT 0b01000000  // Clock control
+  #define SI_CLK_SRC_PLL_A 0b00000000
+  #define SI_CLK_SRC_PLL_B 0b00100000
+  #define SI_CLK_SRC_MS 0b00001100
+  #define SI_CLK_IDRV_8MA 0b00000011
+  #define SI_CLK_INV 0b00010000
+  volatile uint32_t fxtal = 27004300;  //myqcx1:27003847 myqcx2:27004900  Actual crystal frequency of 27MHz XTAL2 for CL = 10pF (default), calibrate your QCX 27MHz crystal frequency here
+  #define SI_PLL_FREQ (16*fxtal)  //900000000, with 432MHz(=16*27M) PLL freq, usable range is 3.46..100MHz
+
+  volatile uint8_t prev_divider;
+  volatile int32_t raw_freq;
+  volatile uint8_t divider;  // note: because of int8 only freq > 3.6MHz can be covered for R_DIV=1
+  volatile uint8_t mult;
+  volatile uint8_t pll_regs[8];
+  volatile int32_t iqmsa;
+  volatile int32_t pll_freq;   // temporary
+  
+  SI5351(){
+    init();
+    iqmsa = 0;
+  }
+  uint8_t RecvRegister(uint8_t reg)
+  {
+    // Data write to set the register address
+    start();
+    SendByte(SI_I2C_ADDR << 1);
+    SendByte(reg);
+    stop();
+    // Data read to retrieve the data from the set address
+    start();
+    SendByte((SI_I2C_ADDR << 1) | 1);
+    uint8_t data = RecvByte(true);
+    stop();
+    return data;
+  }
+  void SendRegister(uint8_t reg, uint8_t data)
+  {
+    start();
+    SendByte(SI_I2C_ADDR << 1);
+    SendByte(reg);
+    SendByte(data);
+    stop();
+  }
+  // Set up MultiSynth for register reg=MSNA, MNSB, MS0-5 with fractional divider, num and denom and R divider (for MSn, not for MSNA, MSNB)
+  // divider is 15..90 for MSNA, MSNB,  divider is 8..900 (and in addition 4,6 for integer mode) for MS[0-5]
+  // num is 0..1,048,575 (0xFFFFF)
+  // denom is 0..1,048,575 (0xFFFFF)
+  // num = 0, denom = 1 forces an integer value for the divider
+  // r_div = 1..128 (1,2,4,8,16,32,64,128)
+  void SetupMultisynth(uint8_t reg, uint8_t divider, uint32_t num, uint32_t denom, uint8_t r_div)
+  {
+    uint32_t P1; // Synth config register P1
+    uint32_t P2; // Synth config register P2
+    uint32_t P3; // Synth config register P3
+  
+    P1 = (uint32_t)(128 * ((float)num / (float)denom));
+    P1 = (uint32_t)(128 * (uint32_t)(divider) + P1 - 512);
+    P2 = (uint32_t)(128 * ((float)num / (float)denom));
+    P2 = (uint32_t)(128 * num - denom * P2);
+    P3 = denom;
+  
+    SendRegister(reg + 0, (P3 & 0x0000FF00) >> 8);
+    SendRegister(reg + 1, (P3 & 0x000000FF));
+    SendRegister(reg + 2, (P1 & 0x00030000) >> 16 | ((int)log2(r_div) << 4) );
+    SendRegister(reg + 3, (P1 & 0x0000FF00) >> 8);
+    SendRegister(reg + 4, (P1 & 0x000000FF));
+    SendRegister(reg + 5, ((P3 & 0x000F0000) >> 12) | ((P2 & 0x000F0000) >> 16));
+    SendRegister(reg + 6, (P2 & 0x0000FF00) >> 8);
+    SendRegister(reg + 7, (P2 & 0x000000FF));
+  }
+  inline void SendPLLBRegisterBulk()  // fast freq change of PLLB, takes about [ 2 + 7*(8+1) + 2 ] / 840000 = 80 uS
+  {
+    start();
+    SendByte(SI_I2C_ADDR << 1);
+    SendByte(SI_SYNTH_PLL_B + 3);  // Skip the first three pll_regs bytes (first two always 0xFF and third not often changing
+    SendByte(pll_regs[3]);
+    SendByte(pll_regs[4]);
+    SendByte(pll_regs[5]);
+    SendByte(pll_regs[6]);
+    SendByte(pll_regs[7]);
+    stop();
+  }
+  
+  #define FAST __attribute__((optimize("Ofast")))
+
+  // this function relies on cached (global) variables: divider, mult, raw_freq, pll_regs
+  inline void FAST freq_calc_fast(int16_t freq_offset)
+  { // freq_offset is relative to freq set in freq(freq)
+    // uint32_t num128 = ((divider * (raw_freq + offset)) % fxtal) * (float)(0xFFFFF * 128) / fxtal;
+    // Above definition (for fxtal=27.00491M) can be optimized by pre-calculating factor (0xFFFFF*128)/fxtal (=4.97) as integer constant (5) and
+    // substracting the rest error factor (0.03). Note that the latter is shifted left (0.03<<6)=2, while the other term is shifted right (>>6)
+    register int32_t z = ((divider * (raw_freq + freq_offset)) % fxtal);
+    register int32_t z2 = -(z >> 5);
+    int32_t num128 = (z * 5) + z2;
+  
+    // Set up specified PLL with mult, num and denom: mult is 15..90, num128 is 0..128*1,048,575 (128*0xFFFFF), denom is 0..1,048,575 (0xFFFFF)
+    uint32_t P1 = 128 * mult + (num128 / 0xFFFFF) - 512;
+    uint32_t P2 = num128 % 0xFFFFF;
+    //pll_regs[0] = 0xFF;
+    //pll_regs[1] = 0xFF;
+    //pll_regs[2] = (P1 >> 14) & 0x0C;
+    pll_regs[3] = P1 >> 8;
+    pll_regs[4] = P1;
+    pll_regs[5] = 0xF0 | (P2 >> 16);
+    pll_regs[6] = P2 >> 8;
+    pll_regs[7] = P2;
+  }
+  uint16_t div(uint32_t num, uint32_t denom, uint32_t* b, uint32_t* c)
+  { // returns a + b / c = num / denom, where a is the integer part and b and c is the optional fractional part 20 bits each (range 0..1048575)
+    uint16_t a = num / denom;
+    if(b && c){
+      uint64_t l = num % denom;
+      l <<= 20; l--;  // l *= 1048575;
+      l /= denom;     // normalize
+      *b = l;
+      *c = 0xFFFFF;    // for simplicity set c to the maximum 1048575
+    }
+    return a;
+  }
+  void freq(uint32_t freq, uint8_t i, uint8_t q)
+  { // Fout = Fvco / (R * [MSx_a + MSx_b/MSx_c]),  Fvco = Fxtal * [MSPLLx_a + MSPLLx_b/MSPLLx_c]; MSx as integer reduce spur
+    //uint8_t r_div = (freq > (SI_PLL_FREQ/256/1)) ? 1 : (freq > (SI_PLL_FREQ/256/32)) ? 32 : 128; // helps divider to be in range
+    uint8_t r_div = (freq < 500000) ? 128 : 1;
+    freq *= r_div;  // take r_div into account, now freq is in the range 1MHz to 150MHz
+    raw_freq = freq;   // cache frequency generated by PLL and MS stages (excluding R divider stage); used by freq_calc_fast()
+  
+    divider = SI_PLL_FREQ / freq;  // Calculate the division ratio. 900,000,000 is the maximum internal PLL freq (official range 600..900MHz but can be pushed to 300MHz..~1200Mhz)
+    if(divider % 2) divider--;  // divider in range 8.. 900 (including 4,6 for integer mode), even numbers preferred. Note that uint8 datatype is used, so 254 is upper limit
+    if( (divider * (freq - 5000) / fxtal) != (divider * (freq + 5000) / fxtal) ) divider -= 2; // Test if multiplier remains same for freq deviation +/- 5kHz, if not use different divider to make same
+    pll_freq = divider * freq; // Calculate the pll_freq: the divider * desired output freq
+    uint32_t num, denom;
+    mult = div(pll_freq, fxtal, &num, &denom); // Determine the mult to get to the required pll_freq (in the range 15..90)
+  
+    // Set up specified PLL with mult, num and denom: mult is 15..90, num is 0..1,048,575 (0xFFFFF), denom is 0..1,048,575 (0xFFFFF)
+    // Set up PLL A and PLL B with the calculated  multiplication ratio
+    SetupMultisynth(SI_SYNTH_PLL_A, mult, num, denom, 1);
+    SetupMultisynth(SI_SYNTH_PLL_B, mult, num, denom, 1);
+    //if(denom == 1) SendRegister(22, SI_MSx_INT); // FBA_INT: MSNA operates in integer mode
+    //if(denom == 1) SendRegister(23, SI_MSx_INT); // FBB_INT: MSNB operates in integer mode
+    // Set up MultiSynth 0,1,2 with the calculated divider, from 4, 6..1800.
+    // The final R division stage can divide by a power of two, from 1..128
+    // if you want to output frequencies below 1MHz, you have to use the final R division stage
+    SetupMultisynth(SI_SYNTH_MS_0, divider, 0, 1, r_div);
+    SetupMultisynth(SI_SYNTH_MS_1, divider, 0, 1, r_div);
+    SetupMultisynth(SI_SYNTH_MS_2, divider, 0, 1, r_div);
+    //if(prev_divider != divider){ lcd.setCursor(0, 0); lcd.print(divider); lcd_blanks();
+    // Set I/Q phase
+    SendRegister(SI_CLK0_PHOFF, i * divider / 90); // one LSB equivalent to a time delay of Tvco/4 range 0..127
+    SendRegister(SI_CLK1_PHOFF, q * divider / 90); // one LSB equivalent to a time delay of Tvco/4 range 0..127
+    // Switch on the CLK0, CLK1 output to be PLL A and set multiSynth0, multiSynth1 input (0x0F = SI_CLK_SRC_MS | SI_CLK_IDRV_8MA)
+    SendRegister(SI_CLK0_CONTROL, 0x0F | SI_MS_INT | SI_CLK_SRC_PLL_A);
+    SendRegister(SI_CLK1_CONTROL, 0x0F | SI_MS_INT | SI_CLK_SRC_PLL_A);
+    // Switch on the CLK2 output to be PLL B and set multiSynth2 input
+    SendRegister(SI_CLK2_CONTROL, 0x0F | SI_MS_INT | SI_CLK_SRC_PLL_B);
+    SendRegister(SI_CLK_OE, 0b11111100); // Enable CLK1|CLK0
+    // Reset the PLL. This causes a glitch in the output. For small changes to
+    // the parameters, you don't need to reset the PLL, and there is no glitch
+    if((abs(pll_freq - iqmsa) > 16000000L) || divider != prev_divider){
+      iqmsa = pll_freq;
+      prev_divider = divider;
+      SendRegister(SI_PLL_RESET, 0xA0);
+    }
+    //SendRegister(24, 0b00000000); // CLK3-0 Disable State: CLK2=0 (BE CAREFUL TO CHANGE THIS!!!), CLK1/0=00 -> IC4-X0 selected -> 2,5V on IC5A/3(+), when IC5/2(-) leaks down below 2.5V -> 12V on IC5A/1, IC6A/2(-) -> 0V on IC6A/1, AUDIO2
+  }
+  void alt_clk2(uint32_t freq)
+  {
+    uint32_t num, denom;
+    uint16_t mult = div(pll_freq, freq, &num, &denom);
+  
+    SetupMultisynth(SI_SYNTH_MS_2, mult, num, denom, 1);
+  
+    // Switch on the CLK2 output to be PLL A and set multiSynth2 input
+    SendRegister(SI_CLK2_CONTROL, 0x0F | SI_CLK_SRC_PLL_A);
+  
+    SendRegister(SI_CLK_OE, 0b11111000); // Enable CLK2|CLK1|CLK0
+  
+    //SendRegister(SI_CLK0_PHOFF, 0 * divider / 90); // one LSB equivalent to a time delay of Tvco/4 range 0..127
+    //SendRegister(SI_CLK1_PHOFF, 90 * divider / 90); // one LSB equivalent to a time delay of Tvco/4 range 0..127
+    //SendRegister(SI_CLK2_PHOFF, 45 * divider / 90); // one LSB equivalent to a time delay of Tvco/4 range 0..127
+    //SendRegister(SI_PLL_RESET, 0xA0);
+  }
+  void powerDown()
+  {
+    SendRegister(SI_CLK0_CONTROL, 0b10000000);  // Conserve power when output is disabled
+    SendRegister(SI_CLK1_CONTROL, 0b10000000);
+    SendRegister(SI_CLK2_CONTROL, 0b10000000);
+    SendRegister(19, 0b10000000);
+    SendRegister(20, 0b10000000);
+    SendRegister(21, 0b10000000);
+    SendRegister(22, 0b10000000);
+    SendRegister(23, 0b10000000);
+    SendRegister(SI_CLK_OE, 0b11111111); // Disable all CLK outputs
+  }
+};
+static SI5351 si5351;
+ */
 
 #undef F_CPU
-#define F_CPU 27007000   // myqcx1:20008440, myqcx2:20006000   // Actual crystal frequency of 20MHz XTAL1, note that this declaration is just informative and does not correct the timing in Arduino functions like delay(); hence a 1.25 factor needs to be added for correction.
+#define F_CPU 20007000   // myqcx1:20008440, myqcx2:20006000   // Actual crystal frequency of 20MHz XTAL1, note that this declaration is just informative and does not correct the timing in Arduino functions like delay(); hence a 1.25 factor needs to be added for correction.
 //#define F_CPU F_XTAL   // in case ATMEGA328P clock is the same as SI5351 clock (ATMEGA clock tapped from SI crystal)
 
 #define DEBUG  1   // enable testing and diagnostics features
@@ -1876,6 +2160,43 @@ void switch_rxtx(uint8_t tx_enable){
   TIMSK2 |= (1 << OCIE2A);  // enable timer compare interrupt TIMER2_COMPA_vect
 }
 
+#ifdef QCX
+#define CAL_IQ 1
+#ifdef CAL_IQ
+int16_t cal_iq_dummy = 0;
+// RX I/Q calibration procedure: terminate with 50 ohm, enable CW filter, adjust R27, R24, R17 subsequently to its minimum side-band rejection value in dB
+void calibrate_iq()
+{
+  smode = 1;
+  lcd.setCursor(0, 0); lcd.print(blanks); lcd.print(blanks);
+  digitalWrite(SIG_OUT, true); // loopback on
+  si5351.freq(freq, 0, 90);  // RX in USB
+  si5351.SendRegister(SI_CLK_OE, 0b11111000); // CLK2_EN=0, CLK1_EN,CLK0_EN=1
+  float dbc;
+  si5351.freq_calc_fast(+700); si5351.SendPLLBRegisterBulk(); delay(100);
+  dbc = smeter();
+  si5351.freq_calc_fast(-700); si5351.SendPLLBRegisterBulk(); delay(100);
+  lcd.setCursor(0, 1); lcd.print("I-Q bal. 700Hz"); lcd.print(blanks);
+  for(; !digitalRead(BUTTONS);){ wdt_reset(); smeter(dbc); } for(; digitalRead(BUTTONS);) wdt_reset();
+  si5351.freq_calc_fast(+600); si5351.SendPLLBRegisterBulk(); delay(100);
+  dbc = smeter();
+  si5351.freq_calc_fast(-600); si5351.SendPLLBRegisterBulk(); delay(100);
+  lcd.setCursor(0, 1); lcd.print("Phase Lo 600Hz"); lcd.print(blanks);
+  for(; !digitalRead(BUTTONS);){ wdt_reset(); smeter(dbc); } for(; digitalRead(BUTTONS);) wdt_reset();
+  si5351.freq_calc_fast(+800); si5351.SendPLLBRegisterBulk(); delay(100);
+  dbc = smeter();
+  si5351.freq_calc_fast(-800); si5351.SendPLLBRegisterBulk(); delay(100);
+  lcd.setCursor(0, 1); lcd.print("Phase Hi 800Hz"); lcd.print(blanks);
+  for(; !digitalRead(BUTTONS);){ wdt_reset(); smeter(dbc); } for(; digitalRead(BUTTONS);) wdt_reset();
+
+  lcd.setCursor(9, 0); lcd.print(blanks);  // cleanup dbmeter
+  digitalWrite(SIG_OUT, false); // loopback off
+  si5351.SendRegister(SI_CLK_OE, 0b11111100); // CLK2_EN=0, CLK1_EN,CLK0_EN=1
+  change = true;  //restore original frequency setting
+}
+#endif
+#endif //QCX
+
 int8_t prev_bandval = 2;
 int8_t bandval = 2;
 #define N_BANDS 10
@@ -1959,7 +2280,13 @@ void powerDown()
 
 void show_banner(){
   lcd.setCursor(0, 0);
+#ifdef QCX
+  lcd.print(F("QCX"));
+  const char* cap_label[] = { "SSB", "DSP", "SDR" };
+  if(ssb_cap || dsp_cap){ lcd.print(F("-")); lcd.print(cap_label[dsp_cap]); }
+#else
   lcd.print(F("uSDX"));
+#endif
   lcd.print(F("\x01 ")); lcd_blanks();
 }
 
@@ -2099,18 +2426,22 @@ void paramAction(uint8_t action, uint8_t id = ALL)  // list of parameters
 
 void initPins(){  
   // initialize
-//  digitalWrite(SIG_OUT, LOW);
+  digitalWrite(SIG_OUT, LOW);
   digitalWrite(RX, HIGH);
   digitalWrite(KEY_OUT, LOW);
   digitalWrite(SIDETONE, LOW);
 
   // pins
   pinMode(SIDETONE, OUTPUT);
-//  pinMode(SIG_OUT, OUTPUT);
+  pinMode(SIG_OUT, OUTPUT);
   pinMode(RX, OUTPUT);
   pinMode(KEY_OUT, OUTPUT);
-  //pinMode(BUTTONS, INPUT_PULLUP);  // rotary button
+//#define ONEBUTTON  1
+#ifdef ONEBUTTON
+  pinMode(BUTTONS, INPUT_PULLUP);  // rotary button
+#else
   pinMode(BUTTONS, INPUT);  // L/R/rotary button
+#endif
   pinMode(DIT, INPUT_PULLUP);
   //pinMode(DAH, INPUT);  
   pinMode(DAH, INPUT_PULLUP); // Could this replace D4?
@@ -2184,7 +2515,49 @@ void setup()
   //Init si5351
   si5351.powerDown();  // Disable all (used) outputs
 
+#ifdef QCX
+  // Test if QCX has DSP/SDR capability: SIDETONE output disconnected from AUDIO2
+  ssb_cap = 0; dsp_cap = 0;
+  si5351.SendRegister(SI_CLK_OE, 0b11111111); // Mute QSD: CLK2_EN=CLK1_EN,CLK0_EN=0  
+  digitalWrite(RX, HIGH);  // generate pulse on SIDETONE and test if it can be seen on AUDIO2
+  delay(1); // settle
+  digitalWrite(SIDETONE, LOW);
+  int16_t v1 = analogRead(AUDIO2);
+  digitalWrite(SIDETONE, HIGH);
+  int16_t v2 = analogRead(AUDIO2);
+  digitalWrite(SIDETONE, LOW);
+  dsp_cap = !(abs(v2 - v1) > (0.05 * 1024.0 / 5.0));  // DSP capability?
+  if(dsp_cap){  // Test if QCX has SDR capability: AUDIO2 is disconnected from AUDIO1  (only in case of DSP capability)
+    delay(400); wdt_reset(); // settle:  the following test only works well 400ms after startup
+    v1 = analogRead(AUDIO1);
+    digitalWrite(AUDIO2, HIGH);   // generate pulse on AUDIO2 and test if it can be seen on AUDIO1
+    pinMode(AUDIO2, OUTPUT);
+    delay(1);
+    digitalWrite(AUDIO2, LOW); 
+    delay(1);
+    digitalWrite(AUDIO2, HIGH);
+    v2 = analogRead(AUDIO1);
+    pinMode(AUDIO2, INPUT);
+    if(!(abs(v2 - v1) > (0.125 * 1024.0 / 5.0))) dsp_cap = SDR;  // SDR capacility?
+  }
+  // Test if QCX has SSB capability: DAH is connected to DVM
+  delay(1); // settle
+  pinMode(DAH, OUTPUT);
+  digitalWrite(DAH, LOW);
+  v1 = analogRead(DVM);
+  digitalWrite(DAH, HIGH);
+  v2 = analogRead(DVM);
+  digitalWrite(DAH, LOW);
+  pinMode(DAH, INPUT_PULLUP);
+  ssb_cap = (abs(v2 - v1) > (0.05 * 1024.0 / 5.0));  // SSB capability?
+
+  //ssb_cap = 0; dsp_cap = 0;  // force standard QCX capability
+  //ssb_cap = 1; dsp_cap = 0;  // force SSB and standard QCX-RX capability
+  //ssb_cap = 1; dsp_cap = 1;  // force SSB and DSP capability
+  //ssb_cap = 1; dsp_cap = 2;  // force SSB and SDR capability
+#else
   ssb_cap = 1; dsp_cap = 2;  // force SSB and SDR capability
+#endif
 
   show_banner();
   lcd.setCursor(7, 0); lcd.print(F(" R")); lcd.print(F(VERSION)); lcd_blanks();
@@ -2241,7 +2614,9 @@ void setup()
   // Measure VEE (+3.3V); should be ~3.3V
   float vee = (float)analogRead(SCL) * 5.0 / 1024.0;
   if(!(vee > 3.2 && vee < 3.8)){
-    lcd.setCursor(0, 1); lcd.print(F("!!V3.3=")); lcd.print(vee); lcd.print(F("V")); lcd_blanks();
+    lcd.setCursor(0, 1); lcd.print(F("!!V3.3=")); 
+    lcd.print(vee); 
+    lcd.print(F("V")); lcd_blanks();
     delay(1500); wdt_reset();
   }
 
@@ -2399,6 +2774,12 @@ void loop()
   if(millis() > sec_event_time){
     sec_event_time = millis() + 1000;  // schedule time next second
 
+//#define LCD_REINIT
+#ifdef LCD_REINIT
+#ifndef OLED
+    lcd.begin();  // fast LCD re-init (in case LCD has been taken out and placed back when power-on)
+#endif
+#endif
   }
 
   if(menumode == 0){
@@ -2411,8 +2792,12 @@ void loop()
     lcd.setCursor(0, 1); lcd.print(out);
   }
 
+#ifdef ONEBUTTON
+  uint8_t inv = 1;
+#else
   uint8_t inv = 0;
-  
+#endif
+
 #define DAH_AS_KEY  1
 #ifdef DAH_AS_KEY
   if(!digitalRead(DIT)  || ((mode == CW) && (!digitalRead(DAH))) ){  // PTT/DIT keys transmitter,  for CW also DAH
