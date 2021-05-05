@@ -9,3 +9,8 @@ This document will include information on ADF4351 evaluation as main oscillator.
 - We need to choost IF frequencies that we can find SAW filters easily
 - We need to choost IF frequencies that we can receive and/or transmit with self-made SDR transceiver (preferably HF, <50MHz)
 - 
+
+
+
+Register settings of ADF4351 for dual output
+<IMG SRC=https://raw.githubusercontent.com/barisdinc/QO100-Partable/main/Docs/ADF4351_rfab.jpg>
