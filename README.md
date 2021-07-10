@@ -5,3 +5,11 @@ My design basics are as follows;Will use as much as I can from QCX/uSDX designDo
 
 
 <IMG SRC=https://raw.githubusercontent.com/barisdinc/QO100-Partable/main/Docs/qo100-at-sdr_basic_design.png>
+
+  
+  
+ #Features :
+  - GPS Reference input
+  - IF transceiver option
+  - External PA/RTX control
+  - 
