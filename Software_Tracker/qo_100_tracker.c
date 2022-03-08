@@ -1846,7 +1846,7 @@ static SI5351 si5351;
 uint32_t registers[4][6] =  {
                             {0x004A2580, 0x08004E21, 0x18004E42, 0x000004B3, 0x00DC803C, 0x00580005}, //116
                             {0x00403200, 0x08004E21, 0x18004E42, 0x000004B3, 0x00BC803C, 0x00580005}, //402
-                            {0x002C0000, 0x08004E21, 0x18004E42, 0x000004B3, 0x009C803C, 0x00580005}, //1100
+                            {0x002C0028, 0x080081F1, 0x78005E42, 0x000004B3, 0x009C83FC, 0x00580005}, //1100.008
                             {0x0038BB60, 0x08004E21, 0x18004E42, 0x000004B3, 0x00AC803C, 0x00580005}  //711
                             };
 
@@ -4915,7 +4915,7 @@ void setup()
 {
 #ifdef TRANSVERTER
   //while(1) 
-  tune_transverter();
+  //tune_transverter();
 #endif
   
   digitalWrite(KEY_OUT, LOW);  // for safety: to prevent exploding PA MOSFETs, in case there was something still biasing them.
@@ -5218,9 +5218,16 @@ void setup()
 }
 
 static int32_t _step = 0;
-
+uint32_t trans_cnt=0;
 void loop()
 {
+#ifdef TRANSVERTER
+  //while(1) 
+  //if (trans_cnt%5000)
+  //tune_transverter();
+  //trans_cnt++;
+#endif
+
 #ifdef VOX_ENABLE
   if((vox) && ((mode == LSB) || (mode == USB))){  // If VOX enabled (and in LSB/USB mode), then take mic samples and feed ssb processing function, to derive amplitude, and potentially detect cross vox_threshold to detect a TX or RX event: this is expressed in tx variable
     if(!vox_tx){ // VOX not active
