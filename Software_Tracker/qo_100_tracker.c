@@ -9,11 +9,7 @@
 // Configuration switches; remove/add a double-slash at line-start to enable/disable a feature; to save space disable e.g. CAT, DIAG, KEYER
 #define DIAG             1   // Hardware diagnostics on startup (only disable when your rig is working)
 //#define KEYER            1   // CW keyer
-<<<<<<< HEAD
 #define CAT              1   // CAT-interface
-=======
-//#define CAT              1   // CAT-interface
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
 #define F_XTAL    27005000   // 27MHz SI5351 crystal
 //#define F_XTAL  25004000   // 25MHz SI5351 crystal  (enable for WB2CBA-uSDX, SI5351 break-out board or uSDXDuO)
 //#define F_XTAL  25000000   // 25MHz SI5351 crystal  (enable for 25MHz TCXO)
@@ -1609,11 +1605,7 @@ public:
   }
   void powerDown(){
     SendRegister(3, 0b11111111); // Disable all CLK outputs
-<<<<<<< HEAD
     SendRegister(24, 0b00010000); // Disable state: LOW state when disabled
-=======
-    SendRegister(24, 0b00000000); // Disable state: LOW state when disabled
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
     SendRegister(25, 0b00000000); // Disable state: LOW state when disabled
     for(int addr = 16; addr != 24; addr++) SendRegister(addr, 0b10000000);  // Conserve power when output is disabled
     SendRegister(187, 0);        // Disable fanout (power-safe)
@@ -1837,7 +1829,6 @@ public:
     SendRegister(22, 0b10000000);
     SendRegister(23, 0b10000000);
     SendRegister(SI_CLK_OE, 0b11111111); // Disable all CLK outputs
-<<<<<<< HEAD
   }
 };
 static SI5351 si5351;
@@ -1921,6 +1912,51 @@ void tune_transverter()
   delayMicroseconds(100);
   for (int ii = 5; ii >= 0; ii--)
   {
+=======
+  {
+    SendRegister(SI_CLK0_CONTROL, 0b10000000);  // Conserve power when output is disabled
+    SendRegister(SI_CLK1_CONTROL, 0b10000000);
+    SendRegister(SI_CLK2_CONTROL, 0b10000000);
+    SendRegister(19, 0b10000000);
+    SendRegister(20, 0b10000000);
+    SendRegister(21, 0b10000000);
+    SendRegister(22, 0b10000000);
+    SendRegister(23, 0b10000000);
+    SendRegister(SI_CLK_OE, 0b11111111); // Disable all CLK outputs
+  }
+};
+static SI5351 si5351;
+ */
+
+
+#ifdef TRANSVERTER
+//  MOSI (pin 11) ADF DATA, 
+//  SCK  (pin13)  ADF CLK, 
+//Select (PIN 3)  ADF LE
+
+#define SCKPin  13
+#define MOSIPin  11
+#define ADF4351_LE 8
+uint32_t registers[4][6] =  {
+                            {0x004A2580, 0x08004E21, 0x18004E42, 0x000004B3, 0x00DC803C, 0x00580005}, //116
+                            {0x00403200, 0x08004E21, 0x18004E42, 0x000004B3, 0x00BC803C, 0x00580005}, //402
+                            {0x002C0028, 0x080081F1, 0x78005E42, 0x000004B3, 0x009C83FC, 0x00580005}, //1100.008
+                            {0x0038BB60, 0x08004E21, 0x18004E42, 0x000004B3, 0x00AC803C, 0x00580005}  //711
+                            };
+
+void tune_transverter()
+{ 
+  pinMode(ADF4351_LE, OUTPUT);
+  pinMode(SCKPin, OUTPUT);
+  pinMode(MOSIPin, OUTPUT);
+  if (transverter == 0) return; //nothing todo , no transverter is active
+  
+  digitalWrite(SCKPin, LOW);
+  digitalWrite(ADF4351_LE, HIGH);
+  delayMicroseconds(100);
+  for (int ii = 5; ii >= 0; ii--)
+  {
+>>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
     digitalWrite(ADF4351_LE, LOW);
     delayMicroseconds(20);
       for(int bb=31; bb>=0;bb--)
@@ -1936,7 +1972,6 @@ void tune_transverter()
     digitalWrite(ADF4351_LE, HIGH);
     delayMicroseconds(20);
   }
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
 
 }
 
@@ -2273,11 +2308,8 @@ void dsp_tx_cw()
 #ifdef KEY_CLICK
   if(OCR1BL < lut[255]) { //check if already ramped up: ramp up of amplitude 
      for(uint16_t i = 31; i != 0; i--) {   // soft rising slope against key-clicks
-<<<<<<< HEAD
         OCR1BL = lut[pgm_read_byte_near(&ramp[i-1])];
-=======
         OCR1BL = lut[pgm_read_byte_near(ramp[i])];
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
         delayMicroseconds(60);
      }
   }
@@ -3980,11 +4012,8 @@ void switch_rxtx(uint8_t tx_enable){
 #ifdef KEY_CLICK
       if(OCR1BL != 0) {
        for(uint16_t i = 0; i != 31; i++) {   // ramp down of amplitude: soft falling edge to prevent key clicks
-<<<<<<< HEAD
          OCR1BL = lut[pgm_read_byte_near(&ramp[i])];
-=======
          OCR1BL = lut[pgm_read_byte_near(ramp[i])];
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
           delayMicroseconds(60);
        }
       }
@@ -4983,11 +5012,7 @@ void setup()
 {
 #ifdef TRANSVERTER
   //while(1) 
-<<<<<<< HEAD
   tune_transverter();
-=======
-  //tune_transverter();
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
 #endif
   
   digitalWrite(KEY_OUT, LOW);  // for safety: to prevent exploding PA MOSFETs, in case there was something still biasing them.
@@ -5282,15 +5307,11 @@ void setup()
   keyerControl = IAMBICB;      // Or 0 for IAMBICA
   loadWPM(keyer_speed);        // Fix speed at 15 WPM
 #endif //KEYER
-<<<<<<< HEAD
-   for(; !_digitalRead(DIT) || ((mode == CW && keyer_mode != SINGLE) && (!_digitalRead(DAH)));){ fatal(F("Check PTT/key")); }// wait until DIH/DAH/PTT is released to prevent TX on startup
-=======
 #ifdef TRANSVERTER
   for(;((mode == CW && keyer_mode != SINGLE) && (!_digitalRead(DAH)));){ fatal(F("Check PTT/key")); }// wait until DIH/DAH/PTT is released to prevent TX on startup
 #else
    for(; !_digitalRead(DIT) || ((mode == CW && keyer_mode != SINGLE) && (!_digitalRead(DAH)));){ fatal(F("Check PTT/key")); }// wait until DIH/DAH/PTT is released to prevent TX on startup
 #endif
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
 }
 
 static int32_t _step = 0;
@@ -5299,18 +5320,18 @@ void loop()
 {
 #ifdef TRANSVERTER
   //while(1) 
-<<<<<<< HEAD
   if (trans_cnt == 50000)
     { 
       tune_transverter();
       trans_cnt=0;
     }
   trans_cnt++;
-=======
   //if (trans_cnt%5000)
   //tune_transverter();
   //trans_cnt++;
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
+  //if (trans_cnt%5000)
+  //tune_transverter();
+  //trans_cnt++;
 #endif
 
 #ifdef VOX_ENABLE
@@ -6018,8 +6039,4 @@ void loop() {
 
   delay(300);
 }
-<<<<<<< HEAD
 */
-=======
-*/
->>>>>>> b05d39b77f4738d8949c6136fa7a66f7a07882cd
