@@ -1,0 +1,17 @@
+[
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/srv/HOME/PROGRAMMING/arduino-1.8.13/hardware/arduino/avr/cores/arduino"
+  },
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/srv/HOME/PROGRAMMING/arduino-1.8.13/hardware/arduino/avr/variants/eightanaloginputs"
+  },
+  {
+    "Sourcefile": "/home/baris/PROJECTS/QO100-Partable/TX/Build/sketch/QO100_tx.ino.cpp",
+    "Include": "",
+    "Includepath": null
+  }
+]

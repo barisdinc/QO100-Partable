@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "DownConverter-rescue")(type "Legacy")(uri "${KIPRJMOD}/DownConverter-rescue.lib")(options "")(descr ""))
+)

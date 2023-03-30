@@ -1,0 +1,8 @@
+{
+    "sketch": "QO100_tx.ino",
+    "port": "/dev/ttyUSB0",
+    "baudRate": 115200,
+    "configuration": "cpu=atmega328old",
+    "output": "./Build",
+    "board": "arduino:avr:nano"
+}
