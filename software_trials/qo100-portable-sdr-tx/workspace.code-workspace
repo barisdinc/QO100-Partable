@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "../../../../Downloads/EXT/APRS-TF0-digi/sil/29Apr/extdigi-TF3SUT"
+		},
+		{
+			"name": "qo100-portable-sdr-tx",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"ctype.h": "c",
+			"string.h": "c",
+			"hw_afsk.h": "c",
+			"cfg_afsk.h": "c",
+			"afsk.h": "c",
+			"ax25.h": "c",
+			"irq.h": "c"
+		}
+	}
+}

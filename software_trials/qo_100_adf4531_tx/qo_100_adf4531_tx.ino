@@ -66,7 +66,7 @@ volatile func_t func_ptr;
 #define btnNONE   6
 
 #define magn(i, q) (abs(i) > abs(q) ? abs(i) + abs(q) / 4 : abs(q) + abs(i) / 4) // approximation of: magnitude = sqrt(i*i + q*q); error 0.95dB
-#define MULTI_ADC  1
+//#define MULTI_ADC  1
 #define VOX_ENABLE       0//1   // Voice-On-Xmit which is switching the transceiver into transmit as soon audio is detected (above noise gate level)
 static uint8_t vox_tx = 0;
 static uint8_t vox_sample = 0;
@@ -277,12 +277,6 @@ inline void _vox(bool trigger)
 
 
 
-
-
-
-
-
-
 inline int16_t ssb(int16_t in)
 {
   static int16_t dc, z1;
@@ -365,53 +359,23 @@ inline int16_t ssb(int16_t in)
 static int16_t _adc;
 void dsp_tx()
 { // jitter dependent things first
-#ifdef MULTI_ADC  // SSB with multiple ADC conversions:
-  int16_t adc;                         // current ADC sample 10-bits analog input, NOTE: first ADCL, then ADCH
-  adc = ADC;
-  ADCSRA |= (1 << ADSC);
+  ADCSRA |= (1 << ADSC);    // start next ADC conversion (trigger ADC interrupt if ADIE flag is set)
   //OCR1BL = amp;                        // submit amplitude to PWM register (actually this is done in advance (about 140us) of phase-change, so that phase-delays in key-shaping circuit filter can settle)
-//BARIS  si5351.SendPLLRegisterBulk();       // submit frequency registers to SI5351 over 731kbit/s I2C (transfer takes 64/731 = 88us, then PLL-loopfilter probably needs 50us to stabalize)
-//#ifdef QUAD
-//#ifdef TX_CLK0_CLK1
-//  si5351.SendRegister(16, (quad) ? 0x1f : 0x0f);  // Invert/non-invert CLK0 in case of a huge phase-change
-//  si5351.SendRegister(17, (quad) ? 0x1f : 0x0f);  // Invert/non-invert CLK1 in case of a huge phase-change
-//#else
-//  si5351.SendRegister(18, (quad) ? 0x1f : 0x0f);  // Invert/non-invert CLK2 in case of a huge phase-change
-//#endif
-//#endif //QUAD
+//  si5351.SendPLLRegisterBulk();       // submit frequency registers to SI5351 over 731kbit/s I2C (transfer takes 64/731 = 88us, then PLL-loopfilter probably needs 50us to stabalize)
+  OCR1BL = amp;                        // submit amplitude to PWM register (takes about 1/32125 = 31us+/-31us to propagate) -> amplitude-phase-alignment error is about 30-50us
+  int16_t adc = ADC - 512; // current ADC sample 10-bits analog input, NOTE: first ADCL, then ADCH
 
-  OCR1BL = amp;                      // submit amplitude to PWM register (takes about 1/32125 = 31us+/-31us to propagate) -> amplitude-phase-alignment error is about 30-50us
-  adc += ADC;
-ADCSRA |= (1 << ADSC);  // causes RFI on QCX-SSB units (not on units with direct biasing); ENABLE this line when using direct biasing!!
-  int16_t df = ssb(_adc >> MIC_ATTEN); // convert analog input into phase-shifts (carrier out by periodic frequency shifts)
-  //Serial.println(df);
-  adc += ADC;
-  ADCSRA |= (1 << ADSC);
-
-registers[1] = 0;
-registers[1] |= df << 15; //Phase shift
-registers[1] |= MOD << 3;
-registers[1] |= registers[1] + 1 ; // set address to Register "001"
-bitSet (registers[1], 27); // Prescaler sur 8/9  
+//Serial.println(adc+512);
+  int16_t df = ssb(adc >> MIC_ATTEN);  // convert analog input into phase-shifts (carrier out by periodic frequency shifts)
+//  si5351.freq_calc_fast(df);           // calculate SI5351 registers based on frequency shift and carrier frequency
+Serial.println(df);
+//registers[1] = 0;
+//registers[1] |= df << 15; //Phase shift
+//registers[1] |= MOD << 3;
+//registers[1] |= registers[1] + 1 ; // set address to Register "001"
+//bitSet (registers[1], 27); // Prescaler sur 8/9  
 //TODO: send only register 1
-SetADF4351(); //send all registers to ADF4531 
-
-//BARIS  si5351.freq_calc_fast(df);           // calculate SI5351 registers based on frequency shift and carrier frequency
-
-  adc += ADC;
-  ADCSRA |= (1 << ADSC);
-  //_adc = (adc/4 - 512);
-#define AF_BIAS   32
-  _adc = (adc/4 - (512 - AF_BIAS));        // now make sure that we keep a postive bias offset (to prevent the phase swapping 180 degrees and potentially causing negative feedback (RFI)
-// #else  // SSB with single ADC conversion:
-//   ADCSRA |= (1 << ADSC);    // start next ADC conversion (trigger ADC interrupt if ADIE flag is set)
-//   //OCR1BL = amp;                        // submit amplitude to PWM register (actually this is done in advance (about 140us) of phase-change, so that phase-delays in key-shaping circuit filter can settle)
-//   si5351.SendPLLRegisterBulk();       // submit frequency registers to SI5351 over 731kbit/s I2C (transfer takes 64/731 = 88us, then PLL-loopfilter probably needs 50us to stabalize)
-//   OCR1BL = amp;                        // submit amplitude to PWM register (takes about 1/32125 = 31us+/-31us to propagate) -> amplitude-phase-alignment error is about 30-50us
-//   int16_t adc = ADC - 512; // current ADC sample 10-bits analog input, NOTE: first ADCL, then ADCH
-//   int16_t df = ssb(adc >> MIC_ATTEN);  // convert analog input into phase-shifts (carrier out by periodic frequency shifts)
-//   si5351.freq_calc_fast(df);           // calculate SI5351 registers based on frequency shift and carrier frequency
-#endif
+//SetADF4351(); //send all registers to ADF4531 
 
 // #ifdef CARRIER_COMPLETELY_OFF_ON_LOW
 //   if(tx == 1){ OCR1BL = 0; si5351.SendRegister(SI_CLK_OE, TX0RX0); }   // disable carrier
@@ -571,7 +535,7 @@ void setup() {
 
   RFintold=12345;
   RFout = RFint/100 ;
-  OutputChannelSpacing = 0.01;
+  OutputChannelSpacing = 0.06;
 
   WEE=0;  address=0;
   lcd.blink();
@@ -583,8 +547,9 @@ void setup() {
   func_ptr = dsp_tx;
   build_lut();
   //TIMER2_COMPA_vect();
-//  ADMUX = (1 << REFS0);  // restore reference voltage AREF (5V)
+  ADMUX = (1 << REFS0);  // restore reference voltage AREF (5V)
 
+/*
   timer1_start(F_SAMP_PWM);
   timer2_start(F_SAMP_RX);
   
@@ -593,10 +558,11 @@ void setup() {
   //PCMSK0 = 0;
   //PCMSK1 = 0;
   //PCMSK2 = 0;
-   adc_start(2, true, F_ADC_CONV*4); admux[2] = ADMUX;  // Note that conversion-rate for TX is factors more
-   
+   adc_start(2, false, F_ADC_CONV*4); admux[2] = ADMUX;  // Note that conversion-rate for TX is factors more
+*/   
 } //setup
 
+static uint32_t mdf = 0;
 //*************************************Loop***********************************
 void loop()
 {
@@ -651,7 +617,7 @@ void loop()
     }
 
     INTA = (RFout * OutputDivider) / PFDRFout;
-    MOD = (PFDRFout / OutputChannelSpacing);
+    MOD = (PFDRFout / 0.01);
     FRACF = (((RFout * OutputDivider) / PFDRFout) - INTA) * MOD;
     FRAC = round(FRACF);
     Serial.print("L");Serial.println(INTA,DEC);
@@ -682,7 +648,6 @@ void loop()
     modif=0;
     printAll();  // Affichage LCD
   }
-
   lcd_key = read_LCD_buttons();  // read the buttons
 
   switch (lcd_key)               // Select action
@@ -811,7 +776,60 @@ void loop()
       
     case btnTX:
         adc_key_in = analogRead(0);
-        cw_tx(cw_msg[msg_no]);
+        //cw_tx(cw_msg[msg_no]);
+
+Serial.println(registers[0], HEX);
+Serial.println(registers[1], HEX);
+//Serial.println(registers[2], HEX);
+//Serial.println(registers[3], HEX);
+//Serial.println(registers[4], HEX);
+//Serial.println(registers[5], HEX);
+
+
+        switch_rxtx(0);
+        Serial.println("o");
+        delay(3000);
+        switch_rxtx(1);
+        delay(3000);
+//8004e21
+    INTA = 138.4;//(432.5005 * 8) / 25;//138.4
+    FRACF = 1000;//(((432.5005 * 8) / 25) - 138) * 2500;
+    //FRAC = round(FRACF);
+
+    registers[0] = 0;
+    registers[0] = 4521984;//INTA << 15; // OK
+    //FRAC = FRAC << 3;
+    registers[0] = registers[0] + 999<<3;//8000;//1000<<3
+
+    registers[1] = 0;
+    registers[1] = 2500 << 3;
+    registers[1] = registers[1] + 1 ; // ajout de l'adresse "001"
+    bitSet (registers[1], 27); // Prescaler sur 8/9
+
+    registers[0] = 0x00452BC0;
+    registers[1] = 0x08004E21;//0x80080C9
+
+
+    WriteRegister32(registers[0]);
+    WriteRegister32(registers[1]);
+
+        while (0)
+        {
+          if (mdf <= 100000000) mdf+=100000; else mdf = 0;
+          registers[0] = 0x00452BC0;
+          registers[1] = 0x08004E21;//0x80080C9
+          //registers[1] |= mdf << 15;
+          //registers[1] = 0;
+          //registers[1] |= 0 << 15; //Phase shift
+          //registers[1] |= MOD << 3;
+          //registers[1] |= registers[1] + 1 ; // set address to Register "001"
+          //bitSet (registers[1], 27); // Prescaler sur 8/9  
+          //TODO: send only register 1
+          //SetADF4351(); //send all registers to ADF4531 
+          delay(1000);
+          WriteRegister32(registers[0]);
+          WriteRegister32(registers[1]);
+        }
         delay(1000);
         Serial.print("TX :");Serial.println(rtx_state,DEC);
       break;
@@ -830,6 +848,7 @@ void loop()
    delay (10);timer++;
    //Serial.println(timer,DEC);
    if (timer>1000){lcd.noBlink();timer=0;}
+
 
 
 
