@@ -457,8 +457,15 @@ void WriteRegister32(const uint32_t value)   //Programme un registre 32bits
 }
 
 void SetADF4351()  // Programme tous les registres de l'ADF4351
-{ for (int i = 5; i >= 0; i--)  // programmation ADF4351 en commencant par R5
+{ 
+  Serial.println("Resgiters");
+  for (int i = 5; i >= 0; i--)  // programmation ADF4351 en commencant par R5
+  {
     WriteRegister32(registers[i]);
+    Serial.print(i,DEC);
+    Serial.print(" ");
+    Serial.println(registers[i],HEX);
+  }
 }
 
 // *************** SP ecriture Mot long (32bits) en EEPROM  entre adress et adress+3 **************
@@ -531,7 +538,7 @@ void setup() {
 
   //if (EEPROM.read(101)==55){RFint=EEPROMReadlong(memory*4);}
   //else {RFint=700000;}
-  RFint=433000;
+  RFint=2400000;
 
   RFintold=12345;
   RFout = RFint/100 ;
