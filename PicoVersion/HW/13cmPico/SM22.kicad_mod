@@ -1,0 +1,60 @@
+
+(footprint SM22 (layer F.Cu) (tedit 6569D7AE)
+  (descr "SM-22<p>RF TRANSFORMER")
+  (attr smd)
+  (fp_text reference REF** (at -3.051875 -0.890125 900) (layer F.SilkS)
+    (effects (font (size 0.801015748031 0.801015748031) (thickness 0.15)))
+  )
+  (fp_text value SM22 (at 2.8957495 0.025398 900) (layer F.Fab)
+    (effects (font (size 0.640032283465 0.640032283465) (thickness 0.15)))
+  )
+  (pad 1 smd rect (at -1.27 -1.7145 90.0) (size 1.397 0.762) (layers F.Cu F.Mask F.Paste) (solder_mask_margin 0.102))
+  (pad 2 smd rect (at 0.0 -1.7145 90.0) (size 1.397 0.762) (layers F.Cu F.Mask F.Paste) (solder_mask_margin 0.102))
+  (pad 3 smd rect (at 1.27 -1.7145 90.0) (size 1.397 0.762) (layers F.Cu F.Mask F.Paste) (solder_mask_margin 0.102))
+  (pad 4 smd rect (at 1.27 1.7145 90.0) (size 1.397 0.762) (layers F.Cu F.Mask F.Paste) (solder_mask_margin 0.102))
+  (pad 5 smd rect (at -1.27 1.7145 90.0) (size 1.397 0.762) (layers F.Cu F.Mask F.Paste) (solder_mask_margin 0.102))
+  (fp_line (start -1.905 -1.397) (end 1.905 -1.397) (layer F.Fab) (width 0.0508))
+  (fp_line (start 1.905 -1.397) (end 1.905 1.397) (layer F.Fab) (width 0.0508))
+  (fp_line (start 1.905 1.397) (end -1.905 1.397) (layer F.Fab) (width 0.0508))
+  (fp_line (start -1.905 1.397) (end -1.905 -1.397) (layer F.Fab) (width 0.0508))
+  (fp_poly
+    (pts
+      (xy -1.52588 -2.159)
+      (xy -1.016 -2.159)
+      (xy -1.016 -1.39873)
+      (xy -1.52588 -1.39873)
+    ) (layer F.Fab) (width 0.01)
+  )
+  (fp_poly
+    (pts
+      (xy -0.254285 -2.159)
+      (xy 0.254 -2.159)
+      (xy 0.254 -1.39857)
+      (xy -0.254285 -1.39857)
+    ) (layer F.Fab) (width 0.01)
+  )
+  (fp_poly
+    (pts
+      (xy 1.01612 -2.159)
+      (xy 1.524 -2.159)
+      (xy 1.524 -1.39716)
+      (xy 1.01612 -1.39716)
+    ) (layer F.Fab) (width 0.01)
+  )
+  (fp_poly
+    (pts
+      (xy 1.01635 1.397)
+      (xy 1.524 1.397)
+      (xy 1.524 2.15973)
+      (xy 1.01635 2.15973)
+    ) (layer F.Fab) (width 0.01)
+  )
+  (fp_poly
+    (pts
+      (xy -1.52402 1.397)
+      (xy -1.016 1.397)
+      (xy -1.016 2.15902)
+      (xy -1.52402 2.15902)
+    ) (layer F.Fab) (width 0.01)
+  )
+)
