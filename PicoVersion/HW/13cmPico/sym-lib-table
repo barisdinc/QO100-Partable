@@ -1,3 +1,5 @@
 (sym_lib_table
+  (version 7)
   (lib (name "n3b_tx")(type "KiCad")(uri "/home/baris/n3b_tx.kicad_sym")(options "")(descr ""))
+  (lib (name "ADF435X_module")(type "KiCad")(uri "${KIPRJMOD}/B3N_library/ADF435X_module.kicad_sym")(options "")(descr ""))
 )
