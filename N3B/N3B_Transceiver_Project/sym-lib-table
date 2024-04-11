@@ -1,0 +1,8 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "ETC1-1-13TR")(type "KiCad")(uri "${KIPRJMOD}/B3N_library/ETC1-1-13TR.kicad_sym")(options "")(descr ""))
+  (lib (name "MCU_RaspberryPi_and_Boards")(type "KiCad")(uri "${KIPRJMOD}/B3N_library/MCU_RaspberryPi_and_Boards.kicad_sym")(options "")(descr ""))
+  (lib (name "AD8348ARUZ")(type "KiCad")(uri "${KIPRJMOD}/B3N_library/AD8348ARUZ.kicad_sym")(options "")(descr ""))
+  (lib (name "AD8052ARZ")(type "KiCad")(uri "${KIPRJMOD}/B3N_library/AD8052ARZ.kicad_sym")(options "")(descr ""))
+  (lib (name "ADF4360-5BCP")(type "KiCad")(uri "${KIPRJMOD}/B3N_library/ADF4360-5BCP.kicad_sym")(options "")(descr ""))
+)

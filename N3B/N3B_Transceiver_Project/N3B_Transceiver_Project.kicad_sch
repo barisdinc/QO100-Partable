@@ -1,0 +1,134 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "3f673dcb-5dc8-4a62-ab43-2b238cdefde6")
+	(paper "A3")
+	(title_block
+		(title "N3B Transceiver Project")
+		(rev "0.1")
+		(comment 1 "Baris DINC")
+	)
+	(lib_symbols)
+	(sheet
+		(at 210.566 66.548)
+		(size 49.53 57.658)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "b3436370-1b6a-4d96-8f63-3c987a4f1cc8")
+		(property "Sheetname" "Receiver"
+			(at 210.566 65.8364 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "sub_sheets/Receiver.kicad_sch"
+			(at 210.566 124.7906 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "N3B_Transceiver_Project"
+				(path "/3f673dcb-5dc8-4a62-ab43-2b238cdefde6"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 133.858 66.294)
+		(size 49.784 57.658)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "dcd48c78-8585-41b6-bfeb-0dc1b0c338b7")
+		(property "Sheetname" "Transmitter"
+			(at 133.858 65.5824 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "sub_sheets/Transmitter.kicad_sch"
+			(at 133.858 124.5366 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "inter_MCU_SCL" bidirectional
+			(at 183.642 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "8a8467e2-0836-4936-89c2-89d35e33aab9")
+		)
+		(pin "inter_MCU_SDA" bidirectional
+			(at 183.642 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "002f129a-f9c5-4f1f-aa32-5427908ee16d")
+		)
+		(pin "TX_3V3" input
+			(at 133.858 75.565 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "1537f60f-e976-4cd4-9c32-0216526f4bfe")
+		)
+		(pin "GND" input
+			(at 133.858 80.645 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "1b7722c1-49d7-4d05-9966-245e4df523e5")
+		)
+		(instances
+			(project "N3B_Transceiver_Project"
+				(path "/3f673dcb-5dc8-4a62-ab43-2b238cdefde6"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)
